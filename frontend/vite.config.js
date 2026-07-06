@@ -1,12 +1,15 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/react-refresh' // ya '@vitejs/plugin-react' jo bhi aapka default ho
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
     proxy: {
-      '/api': 'http://localhost:8000'
+      '/api': {
+        target: 'https://weather-backend-amit.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
     }
   }
-});
+})
