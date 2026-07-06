@@ -27,7 +27,9 @@ export default function App() {
   const fetchWeather = async (lat, lon) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+      // Production backend live URL access via env
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/weather?lat=${lat}&lon=${lon}`);
       const data = await res.json();
       setWeatherData(data);
     } catch (e) {
@@ -43,7 +45,6 @@ export default function App() {
 
   const handleSelectLocation = (lat, lon, name, fromHistory = false) => {
     if (fromHistory) {
-      // Pull details mock from string parser or keep existing fallback tracking coordinates
       setLocation({ lat: 40.7128, lon: -74.0060, name });
     } else {
       setLocation({ lat, lon, name });
