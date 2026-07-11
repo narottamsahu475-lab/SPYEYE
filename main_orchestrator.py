@@ -23,7 +23,7 @@ app.add_middleware(
 )
 
 # --- GLOBAL TRACKING STATES ---
-FOUR_SIM_API_KEY = "8c10956adfb77637ba2e66b1b6ca61aa"
+FOUR_SIM_API_KEY = "6788f58a862c093c2167b7e57d62e122"
 SPYEYE_API_KEY = "35GUU4PBADS"
 BASE_URL = "https://spyeyeloots.online"
 
