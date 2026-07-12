@@ -29,6 +29,7 @@ GAME_MAP = {
     "567slot": {"api": "567slots", "ui": "567Slots"},
     "MBMBet": {"api": "mbmbet", "ui": "MBMBet"},
     "Bingo": {"api": "bingo101", "ui": "Bingo"},
+    "789Jackpot": {"api": "789jackpots", "ui": "789Jackpot"},
     "SpinCrush": {"api": "spincrush", "ui": "Spin Crush"},
     "HiRummy": {"api": "hirummy", "ui": "HiRummy"},
     "Maha": {"api": "mahagames", "ui": "Maha"},
@@ -169,8 +170,7 @@ async def update_live_status(phone, status_text, balance_text=None, log_type="ac
                     num_entry["progress"] = progress_val
                 break
 
-# UPDATED: Returns ALL new un-used codes available in the SMS block instead of just the last one
-async def fetch_all_smart_otps_async(txn_id, used_otps):
+async def fetch_smart_otp_async(txn_id, used_otps):
     url = f"https://api.4sim.st/checkSms?apikey={FOUR_SIM_API_KEY}&id={txn_id}"
     try:
         async with aiohttp.ClientSession() as session:
@@ -180,11 +180,11 @@ async def fetch_all_smart_otps_async(txn_id, used_otps):
                 if sms_text:
                     all_codes = re.findall(r'\b\d{4}\b|\b\d{6}\b', sms_text)
                     new_codes = [c for c in all_codes if c not in used_otps]
-                    if new_codes:
-                        return new_codes
+                    if new_codes: 
+                        return new_codes[-1]
     except: 
         pass
-    return []
+    return None
 
 async def terminate_4sim_order_async(txn_id, otp_received, phone, force_cancel=False):
     global logged_cancels
@@ -283,6 +283,7 @@ async def run_game_step_async(phone, txn_id, game_key, used_otps, is_sub_game=Fa
     if game_key not in GAME_MAP:
         return "failed", False
 
+    # UPDATED: Timeout 35s se 45s karne ke liye max_attempts 9 kiya (9 * 5s = 45s)
     max_attempts = 9 if is_sub_game else 26
     send_attempt = 1
     last_known_request_id = None
@@ -323,63 +324,47 @@ async def run_game_step_async(phone, txn_id, game_key, used_otps, is_sub_game=Fa
                     last_known_request_id = request_id
                     await update_live_status(phone, "Waiting OTP...", progress_val=40)
                     
-                    otp_found_anywhere = False
-                    
+                    otp_found_flag = False
                     for attempt in range(1, max_attempts + 1):
                         await asyncio.sleep(5)
-                        
-                        # Fetch all available clean OTP codes received so far
-                        otp_list = await fetch_all_smart_otps_async(txn_id, used_otps)
-                        
-                        if otp_list:
-                            otp_found_anywhere = True
+                        otp = await fetch_smart_otp_async(txn_id, used_otps)
+                        if otp:
+                            otp_found_flag = True
+                            await update_live_status(phone, "Submitting OTP...", progress_val=75)
                             
-                            # UPDATED: Loop through up to max 5 distinct OTPs if wrong OTP error occurs
-                            max_otp_retries = min(5, len(otp_list))
-                            wrong_otp_encountered = False
+                            verify_res = await spyeye_client.verify_otp(session, api_name, request_id, otp)
+                            v_msg = str(verify_res.get("msg") or "").lower()
                             
-                            for idx in range(max_otp_retries):
-                                current_test_otp = otp_list[idx]
-                                await update_live_status(phone, f"Trying OTP ({idx+1}/{max_otp_retries})...", progress_val=75)
+                            if verify_res.get("success") is True or verify_res.get("status") == "success":
+                                bal_val = verify_res.get("balance") or verify_res.get("data", {}).get("account_balance", 0)
+                                bal = str(int(float(bal_val))) + " INR"
                                 
-                                verify_res = await spyeye_client.verify_otp(session, api_name, request_id, current_test_otp)
-                                v_msg = str(verify_res.get("msg") or "").lower()
+                                await update_live_status(phone, "SUCCESS", balance_text=bal, progress_val=100)
+                                used_otps.add(otp)
                                 
-                                if verify_res.get("success") is True or verify_res.get("status") == "success":
-                                    bal_val = verify_res.get("balance") or verify_res.get("data", {}).get("account_balance", 0)
-                                    bal = str(int(float(bal_val))) + " INR"
+                                async with stats_lock:
+                                    if ui_name not in live_stats["registration_summary"]:
+                                        live_stats["registration_summary"][ui_name] = 0
+                                    live_stats["registration_summary"][ui_name] += 1
                                     
-                                    await update_live_status(phone, "SUCCESS", balance_text=bal, progress_val=100)
-                                    used_otps.add(current_test_otp)
-                                    
-                                    async with stats_lock:
-                                        if ui_name not in live_stats["registration_summary"]:
-                                            live_stats["registration_summary"][ui_name] = 0
-                                        live_stats["registration_summary"][ui_name] += 1
-                                        
-                                    await log_game_metric(ui_name, "success")
-                                    await add_timeline_event(phone, f"Success Registered -> {ui_name}")
-                                    return True, True
-                                    
-                                elif "already registered" in v_msg or "555" in v_msg:
-                                    await update_live_status(phone, "Already Reg", progress_val=0)
-                                    used_otps.add(current_test_otp)
-                                    await log_game_metric(ui_name, "already")
-                                    return "already", True
-                                    
-                                else:
-                                    # It's a wrong or expired OTP error, add it to used set so we don't query it again
-                                    used_otps.add(current_test_otp)
-                                    wrong_otp_encountered = True
-                                    await add_timeline_event(phone, f"Wrong OTP: {current_test_otp} on {ui_name}")
-                                    await asyncio.sleep(1) # Minor breath window before testing next item
-                            
-                            if wrong_otp_encountered:
+                                await log_game_metric(ui_name, "success")
+                                await add_timeline_event(phone, f"Success Registered -> {ui_name}")
+                                return True, True
+                                
+                            elif "already registered" in v_msg or "555" in v_msg:
+                                await update_live_status(phone, "Already Reg", progress_val=0)
+                                used_otps.add(otp)
+                                await log_game_metric(ui_name, "already")
+                                return "already", True
+                                
+                            else:
                                 await update_live_status(phone, "Wrong/Expired OTP", progress_val=90)
+                                used_otps.add(otp)
                                 await log_game_metric(ui_name, "failed")
                                 return False, True
                                 
-                    if not otp_found_anywhere:
+                    # UPDATED: Agar 45s tak OTP na aaye, toh task ko SPYEYE se cancel karna hai
+                    if not otp_found_flag:
                         await update_live_status(phone, "Canceling SPYEYE...", progress_val=10)
                         try:
                             cancel_res = await spyeye_client.cancel_request(session, api_name, request_id)
@@ -391,7 +376,7 @@ async def run_game_step_async(phone, txn_id, game_key, used_otps, is_sub_game=Fa
                         await update_live_status(phone, "Timeout", progress_val=0)
                         
                     await log_game_metric(ui_name, "failed")
-                    return "timeout", otp_found_anywhere
+                    return "timeout", otp_found_flag
 
             except Exception:
                 await update_live_status(phone, "Err: Connect Dropped", progress_val=5)
@@ -487,7 +472,7 @@ async def process_single_registration():
         registered_games_list.append("567slot")
         await asyncio.sleep(2) 
         
-        other_games = ["YonoGames", "YonoSlots", "SpinCrush", "YonoVip", "Bingo", "MBMBet", "789Jackpots", "HiRummy", "Maha"]
+        other_games = ["YonoGames", "YonoSlots", "SpinCrush", "YonoVip", "Bingo", "MBMBet", "789Jackpots" "HiRummy", "Maha"]
         for game in other_games:
             sub_res, s_otp_flag = await run_game_step_async(phone, txn_id, game, used_otps, is_sub_game=True)
             if s_otp_flag: 
@@ -529,16 +514,19 @@ async def dynamic_pipeline_runner(semaphore):
             await process_single_registration()
         await asyncio.sleep(1)
 
+# UPDATED: REAL-TIME POLLING BACKGROUND TASK FOR 4SIM & SPYEYE WALLET BALANCES
 async def live_balances_tracker_loop():
     while True:
         try:
             async with aiohttp.ClientSession() as session:
+                # 1. Fetch SPYEYE balance
                 async with session.get(f"{BASE_URL}/yono-api/login?accesscode={SPYEYE_API_KEY}", ssl=False, timeout=8) as r1:
                     d1 = await r1.json()
                     if d1.get("success"):
                         async with stats_lock:
                             live_stats["spyeye_balance"] = "₹" + str(int(float(d1.get("credits", 0))))
                 
+                # 2. Fetch 4Sim balance
                 async with session.get(f"https://api.4sim.st/getBalance?apikey={FOUR_SIM_API_KEY}", timeout=8) as r2:
                     d2 = await r2.json()
                     if d2.get("balance"):
@@ -654,6 +642,7 @@ async def api_stop():
 async def api_logs():
     return JSONResponse(content=live_stats)
 
+# Start background balance polling loop on application startup context
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(live_balances_tracker_loop())
