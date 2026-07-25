@@ -1,0 +1,26 @@
+<!-- Example: HTML Filter Dropdown -->
+<div class="filter-container">
+    <label for="gameFilter">Filter by Game:</label>
+    <select id="gameFilter" onchange="filterRegistrationHistory()">
+        <option value="all">All Games</option>
+        <option value="bgmi">BGMI</option>
+        <option value="freefire">Free Fire</option>
+        <option value="valorant">Valorant</option>
+        <option value="codm">Call of Duty: Mobile</option>
+    </select>
+</div>
+
+<!-- Registration History Table -->
+<table id="historyTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Player Name</th>
+            <th>Game</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody id="historyTableBody">
+        <!-- Dynamic Data rows here -->
+    </tbody>
+</table>
