@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import json
 import os
@@ -22,38 +22,42 @@ def save_licenses(data):
         json.dump(data, f, indent=4)
 
 
-class LicenseRequest(BaseModel):
-    key: str
-    spyeye: str
-    secret: str
-
-
 class CreateLicense(BaseModel):
     key: str
     spyeye: str
     secret: str
 
 
-@app.post("/api/check-license")
-def check_license(data: LicenseRequest):
+# -------------------------------
+# License Verification (GET)
+# -------------------------------
+@app.get("/api/check-license")
+def check_license(
+    key: str = Query(...),
+    spyeye: str = Query(...),
+    secret: str = Query(...)
+):
 
     licenses = load_licenses()
 
-    if data.key not in licenses:
+    if key not in licenses:
         raise HTTPException(status_code=403, detail="Invalid License")
 
-    lic = licenses[data.key]
+    lic = licenses[key]
 
-    if not lic["active"]:
+    if not lic.get("active", False):
         raise HTTPException(status_code=403, detail="License Blocked")
 
-    if lic["secret"] != data.secret:
+    if lic["secret"] != secret:
         raise HTTPException(status_code=403, detail="Invalid Secret")
 
-    if lic["spyeye"] != data.spyeye:
+    if lic["spyeye"] != spyeye:
         raise HTTPException(status_code=403, detail="Invalid SpyEye Key")
 
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "message": "License Verified"
+    }
 
 
 @app.post("/api/create-license")
