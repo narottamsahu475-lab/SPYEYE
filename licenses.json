@@ -18,5 +18,15 @@
     "spyeye": "TBRSUMANTHAREG56TY6",
     "secret": "7g9h9fha4m2e4c5e",
     "active": true
+  },
+  "LF-BALI-001": {
+  	  "spyeye": "TBRASAHUREG77H",
+  	  "secret": "7g0k9fs74m2b4c5e",
+  	  "active": true
+  },
+  "LF-PAPU-002": {
+  	  "spyeye": "TBRSUMANTHARE8I8",
+  	  "secret": "7c9d8f5a4b2e1c6d",
+  	  "active": true
   }
 }
