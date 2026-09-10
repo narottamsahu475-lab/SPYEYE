@@ -2,7 +2,7 @@
   "LF-PAPU-001": {
     "spyeye": "TBRSUMANTHA0029",
     "secret": "7c9d8f5a4b2e1c6d",
-    "active": true
+    "active": false
   },
   "LF-AMIT-001": {
     "spyeye": "TBRSUMANTHA1205",
@@ -12,12 +12,12 @@
   "LF-RITIK-001": {
     "spyeye": "TBRSUMANTHABUB7Y7H",
     "secret": "7a9d8fha4b2e9c5d",
-    "active": true
+    "active": false
   },
   "LF-AKASH-001": {
     "spyeye": "TBRSUMANTHAREG56TY6",
     "secret": "7g9h9fha4m2e4c5e",
-    "active": true
+    "active": false
   },
   "LF-BALI-001": {
     "spyeye": "TBRASAHUREG77H",
@@ -27,6 +27,6 @@
   "LF-PAPU-002": {
     "spyeye": "TBRSUMANTHARE8I8",
     "secret": "7c9d8f5a4b2e1c6d",
-    "active": true
+    "active": false
   }
 }
