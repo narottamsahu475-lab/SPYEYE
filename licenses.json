@@ -1,7 +1,7 @@
 {
   "LF-PAPU-001": {
     "spyeye": "TBRSUMANTHA0029",
-    "secret": "7c9d8f5a6b2e1c6d",
+    "secret": "7c9d8f5a4b2e1c6d",
     "active": true
   },
   "LF-AMIT-001": {
@@ -26,7 +26,7 @@
   },
   "LF-PAPU-002": {
     "spyeye": "TBRSUMANTHARE8I8",
-    "secret": "7c9d8f5a4b2e1c6d",
-    "active": false
+    "secret": "7c9d8f5a6b2e1c6d",
+    "active": true
   }
 }
