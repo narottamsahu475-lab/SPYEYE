@@ -34,13 +34,18 @@
     "secret": "7a5d8fda4b2e9c4d",
     "active": true
   },
-  "LF-SUMANTA-002": {
+  "LF-SUMANTA-001": {
     "spyeye": "TBRSUMANTHA1313",
     "secret": "7a5d8fda4b2e9c4d",
     "active": true
   },
   "LF-AMIT-002": {
     "spyeye": "TBRSAHUREG2993",
+    "secret": "7a5d8fda4b2e9c4d",
+    "active": true
+  },
+  "LF-SUMANTA-001": {
+    "spyeye": "TBRSUMANTHA1414",
     "secret": "7a5d8fda4b2e9c4d",
     "active": true
   }
